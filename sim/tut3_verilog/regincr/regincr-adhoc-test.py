@@ -28,7 +28,12 @@ input_values.extend( [0]*3 )
 # ''' TUTORIAL TASK ''''''''''''''''''''''''''''''''''''''''''''''''''''''
 # This simulator script is incomplete. As part of the tutorial you will
 # insert code here for constructing and elaborating a RegIncr model.
-# ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+# ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''\/
+
+model = RegIncr()
+model.elaborate()
+
+# ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''/\
 
 # Apply the Verilog import passes and the default pass group
 

@@ -12,7 +12,9 @@
 //
 // `include "vc/trace.v"
 
-// '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+// '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''\/
+`include "vc/trace.v"
+// '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''/\
 
 module tut3_verilog_regincr_RegIncr
 (
@@ -35,7 +37,20 @@ module tut3_verilog_regincr_RegIncr
   // ''' TUTORIAL TASK '''''''''''''''''''''''''''''''''''''''''''''''''''
   // This model is incomplete. As part of the tutorial you will insert
   // combinational logic here to model the incrementer logic.
-  // '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+  // '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''\/
+
+  // Combinational logic
+
+  logic [7:0] temp_wire;
+  always @(*) begin
+    temp_wire = reg_out + 1;
+  end
+
+  // Combinational logic
+
+  assign out = temp_wire;
+
+  // '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''/\
 
   // You will need to uncomment this when you explore line tracing.
   //
@@ -51,7 +66,21 @@ module tut3_verilog_regincr_RegIncr
   //
   // `endif /* SYNTHESIS */
 
-  // '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+  // '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''\/
+
+  `ifndef SYNTHESIS
+
+  logic [`VC_TRACE_NBITS-1:0] str;
+  `VC_TRACE_BEGIN
+  begin
+    $sformat( str, "%x (%x) %x", in_, reg_out, out );
+    vc_trace.append_str( trace_str, str );
+  end
+  `VC_TRACE_END
+
+  `endif /* SYNTHESIS */
+
+  // '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''/\
 
 endmodule
 
