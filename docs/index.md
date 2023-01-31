@@ -583,7 +583,6 @@ tests for the `SortUnitStruct` will fail.
  % mkdir -p $TOPDIR/sim/build
  % cd $TOPDIR/sim/build
  % pytest ../tut3_verilog/sort
- % pytest ../tut3_verilog/sort --test-verilog --dump-vtb
 ```
 
 You can just copy over your implementation of the `MinMaxUnit` from when
@@ -625,6 +624,13 @@ module tut3_verilog_sort_MinMaxUnit
   end
 
 endmodule
+```
+
+Once you have your design working rerun the tests with the
+`--test-verilog` and `--dump-vtb` commadn line options.
+
+```
+ % pytest ../tut3_verilog/sort --test-verilog --dump-vtb
 ```
 
 The `--test-verilog` and `--dump-vtb` command line options tells the
