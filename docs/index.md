@@ -14,6 +14,7 @@ ECE 5745 Tutorial 4: Synopsys/Cadence ASIC Tools
  - Using Synopsys Design Compiler for Synthesis
  - Using Synopsys VCS for Fast-Functional Gate-Level Simulation
  - Using Cadence Innovus for Place-and-Route
+ - Using Synopsys VCS for Back-Annotated Gate-Level Simulation
  - Using Synopsys PrimeTime for Power Analysis
  - Creating Your Own Mini-Flow for the GCD Unit
 
@@ -1917,6 +1918,108 @@ The `-no_gui` command prevents Cadence Innovus from opening the GUI which
 can make interacting with the tool much faster. So consider placing the
 commands from this section into a `.tcl` file to make it easy to rerun
 Cadence Innovus.
+
+Using Synopsys VCS for Back-Annotated Gate-Level Simulation
+--------------------------------------------------------------------------
+
+Before place and route, we used Synopsys VCS to do 4-state simulation and
+gate-level simulation. This time, we'll be using VCS to perform a
+back-annotated gate-level simulation. The key difference between the
+previous gate-level simulation and this one is that in this case, we'll
+be using an `.sdf` file to annotate delays in the gate-level simulation.
+In previous simulations, we only see signals change on the clock edge;
+however, with a back-annotated simulation, we'll know more precisely when
+signals are arriving by using the delay information provided by the
+`.sdf`. This means that running a back-annotated simulation with a cycle
+time that is too fast will cause the design to fail. Back-annotated
+simulations are also useful for helping to verify there are no hold-time
+violations, and to generally confirm that the final chip is behaving as
+expected.
+
+Given the more realistic timing implications of a back-annotated
+simulation, we need to be more careful about the cycle time, input delay,
+and output delay that we provide to vcs. We'll start by creating a build
+directory for our post-pnr run of vcs.
+
+```bash
+ % mkdir -p $TOPDIR/asic/build-sort/vcs-postpnr-build
+ % cd $TOPDIR/asic/build-sort/vcs-postpnr-build
+```
+
+Then we'll run Synopsys VCS to run our gate-level simulation on the
+sort-rtl-struct-random simulator testbench. Notice the differences
+between this command and the fast functional gate-level simulation
+command:
+
+```bash
+ % cd $TOPDIR/asic/build-sort/vcs-postpnr-build
+ % vcs -full64 -sverilog +lint=all -xprop=tmerge -override_timescale=1ns/1ps \
+    +incdir+../../../sim/build \
+    +vcs+dumpvars+SortUnitStruct__p_nbits_8_sort-rtl-struct-random_vcs.vcd \
+    -top SortUnitStruct__p_nbits_8_tb \
+    +define+CYCLE_TIME=0.6 \
+    +define+VTB_INPUT_DELAY=0.03 \
+    +define+VTB_OUTPUT_ASSERT_DELAY=0.57 \
+    +neg_tchk +sdfverbose \
+    -sdf max:SortUnitStruct__p_nbits_8_tb.DUT:../cadence-innovus/post-par.sdf \
+    ../../../sim/build/SortUnitStruct__p_nbits_8_sort-rtl-struct-random_tb.v \
+    $ECE5745_STDCELLS/stdcells.v \
+    ../cadence-innovus/post-par.v
+ % ./simv
+```
+
+This time, we add the flag `+neg_tchk`, which enables negative values in
+timing checks. Negative values in timing checks are important for cells
+which have negative hold times, for example. We also include the
+`+sdfverbose` flag which reads in the `post-par.sdf`. We also assign
+non-zero values for `+define+VTB_INPUT_DELAY` and
+`+define+VTB_OUTPUT_ASSERT_DELAY`. These values are based on the input
+and output delays we set during the Synopsys DC synthesis step which you
+might recall was `0.05*clock_period`. We assert the value at the clock
+constraint minus the output delay. This ensures that the signal arrives
+and is stable by a margin of the output delay. Including these macros
+will ensure that our timing checks will actually mean something. Without
+this, our simulations may pass because data arrives before the clock
+edge, even if it does not arrive before the output delay.
+
+Take a look at the vcd file from this simulation. Here we can see some
+subcycle delays that shows us how long it takes for data to stabilize
+before the following cycle! This is showing the first stage of the sort
+unit pipeline. It shows the input and output of the stage 0 pipeline
+registers, the input/output of the two stage 0 minmax units, and the
+input and output of the stage 1 pipeline registers.
+
+![](assets/fig/waveform.png)
+
+To illustrate how useful these timing checks can be, lets run another
+simulation where we try to push the design to run too quickly. Here, we
+reduce the cycle time down to 0.45 ns:
+
+```bash
+ % cd $TOPDIR/asic/build-sort/vcs-postpnr-build
+ % vcs -full64 -sverilog +lint=all -xprop=tmerge -override_timescale=1ns/1ps \
+    +incdir+../../../sim/build \
+    +vcs+dumpvars+SortUnitStruct__p_nbits_8_sort-rtl-struct-random_vcs.vcd \
+    -top SortUnitStruct__p_nbits_8_tb \
+    +define+CYCLE_TIME=0.4 \
+    +define+VTB_INPUT_DELAY=0.03 \
+    +define+VTB_OUTPUT_ASSERT_DELAY=0.38 \
+    +neg_tchk +sdfverbose \
+    -sdf max:SortUnitStruct__p_nbits_8_tb.DUT:../cadence-innovus/post-par.sdf \
+    ../../../sim/build/SortUnitStruct__p_nbits_8_sort-rtl-struct-random_tb.v \
+    $ECE5745_STDCELLS/stdcells.v \
+    ../cadence-innovus/post-par.v
+ % ./simv
+```
+
+The test should fail due to a setup time violation. It might report a
+setup time violation in a specific cell or it may just output Xs. Even
+though back-annotated gate-level simulation can be a useful way to check
+for timing violations, you should still use static-timing analysis as the
+primary way to ensure your design meets timing. This is because
+static-timing analysis checks _all_ possible paths while any given
+gate-level simulation only checks those paths that are triggered during
+that specific simulation.
 
 Using Synopsys PrimeTime for Power Analysis
 --------------------------------------------------------------------------
